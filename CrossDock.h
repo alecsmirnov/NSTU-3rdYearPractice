@@ -44,12 +44,11 @@ public:
 	CrossDock(std::vector<std::int16_t>::size_type car_capacity, std::string product_filename);
 	CrossDock(std::string car_capacity_filename, std::string product_filename);
 
-	void setCapacity(std::vector<std::int16_t>::size_type car_capacity);
-	void setProducts(const std::vector<Product>& products);
-
 	void readCarCapacityFile(std::string filename);
 	void readProductsFile(std::string filename);
-	void readDeliveryCarList(std::string filename);
+
+	void setCapacity(std::vector<std::int16_t>::size_type car_capacity);
+	void setProducts(const std::vector<Product>& products);
 
 	std::string getStrMinutes(std::uint64_t time) const;
 
@@ -65,6 +64,8 @@ private:
 	void clearProducts();
 	void clearCarList();
 	void clearDeliveryCarList();
+
+	void readDeliveryCarList(std::string filename);
 
 	std::uint64_t carService(const std::vector<std::int16_t>& car_list, const std::vector<std::int16_t>& new_car_list) const;
 

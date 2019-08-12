@@ -57,33 +57,6 @@ void CrossDock::readProductsFile(std::string filename) {
 	infile.close();
 }
 
-void CrossDock::readDeliveryCarList(std::string filename) {
-	clearDeliveryCarList();
-
-	std::ifstream infile(filename);
-
-	std::string line;
-	while (std::getline(infile, line)) {
-		std::stringstream sstream(line);
-
-		std::int16_t product_count = 0;
-		std::int16_t product_id = 0;
-		std::vector<std::int16_t>::size_type free_places = car_capacity;
-		while (sstream >> product_count) {
-			for (std::int16_t i = 0; i != product_count; ++i)
-				delivery_car_list.push_back(product_id);
-
-			free_places -= product_count;
-			++product_id;
-		}
-
-		for (std::vector<std::int16_t>::size_type i = 0; i != free_places; ++i)
-			delivery_car_list.push_back(CDConst::EMPTY_PLACE);
-	}
-
-	infile.close();
-}
-
 void CrossDock::printBrief(std::ostream& output_stream, const std::vector<std::int16_t>& car_list, std::uint64_t time) const {
 	for (std::vector<std::int16_t>::size_type i = 0; i != car_list.size(); ++i) {
 		if (car_list[i] != CDConst::EMPTY_PLACE)
@@ -142,6 +115,8 @@ Delivery CrossDock::findOptimalOrder(std::ostream& output_stream, OutputForm out
 
 	if (delivery_filename != CDConst::NO_FILE)
 		readDeliveryCarList(delivery_filename);
+	else
+		clearDeliveryCarList();
 
 	if (!products.empty()) {
 		makeCarList();
@@ -182,6 +157,33 @@ void CrossDock::clearCarList() {
 
 void CrossDock::clearDeliveryCarList() {
 	std::vector<std::int16_t>().swap(delivery_car_list);
+}
+
+void CrossDock::readDeliveryCarList(std::string filename) {
+	clearDeliveryCarList();
+
+	std::ifstream infile(filename);
+
+	std::string line;
+	while (std::getline(infile, line)) {
+		std::stringstream sstream(line);
+
+		std::int16_t product_count = 0;
+		std::int16_t product_id = 0;
+		std::vector<std::int16_t>::size_type free_places = car_capacity;
+		while (sstream >> product_count) {
+			for (std::int16_t i = 0; i != product_count; ++i)
+				delivery_car_list.push_back(product_id);
+
+			free_places -= product_count;
+			++product_id;
+		}
+
+		for (std::vector<std::int16_t>::size_type i = 0; i != free_places; ++i)
+			delivery_car_list.push_back(CDConst::EMPTY_PLACE);
+	}
+
+	infile.close();
 }
 
 std::uint64_t CrossDock::carService(const std::vector<std::int16_t>& car_list, const std::vector<std::int16_t>& new_car_list) const {
