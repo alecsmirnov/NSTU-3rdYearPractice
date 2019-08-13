@@ -215,10 +215,8 @@ std::uint64_t Controller::carService(const std::vector<std::int16_t>& car_list, 
 	
 	for (std::vector<std::int16_t>::size_type i = 0; i != car_list.size(); ++i)
 		if (car_list[i] != new_car_list[i] && car_list[i] != EMPTY_PLACE)
-			if (car_list[i] != EMPTY_PLACE && new_car_list[i] != EMPTY_PLACE) {
-				time += products[car_list[i]].unloading_time;
-				time += products[new_car_list[i]].loading_time;
-			}
+			if (car_list[i] != EMPTY_PLACE && new_car_list[i] != EMPTY_PLACE)
+				time += products[car_list[i]].unloading_time + products[new_car_list[i]].loading_time;
 
 	return time;
 }
