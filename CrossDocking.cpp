@@ -244,8 +244,8 @@ Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr pri
 	auto delivery = EMPTY_DELIVERY;
 
 	auto new_car_list(car_list);
-	std::vector<std::vector<std::int16_t>> delivery_cars;
 
+	std::vector<std::vector<std::int16_t>> delivery_cars;
 	for (std::vector<std::int16_t>::size_type i = 0; i != cars_count; ++i)
 		delivery_cars.push_back(getCar(delivery_car_list, i));
 
