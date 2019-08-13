@@ -10,6 +10,7 @@ namespace CrossDocking {
 
 static const Product  EMPTY_PRODUCT  = {0, "", 0, 0, 0};
 static const Delivery EMPTY_DELIVERY = {{}, 0};
+static const Delivery INIT_DELIVERY  = {{}, std::numeric_limits<std::uint64_t>::max()};
 
 Controller::Controller(std::vector<std::int16_t>::size_type car_capacity, const std::vector<Product>& products) {
 	this->car_capacity = car_capacity;
@@ -35,6 +36,14 @@ void Controller::setProducts(const std::vector<Product>& products) {
 	this->products = products;
 }
 
+std::vector<std::int16_t>::size_type Controller::getCarCapacity() const {
+	return car_capacity;
+}
+
+std::vector<std::int16_t>::size_type Controller::getCarsCount() const {
+	return cars_count;
+}
+
 void Controller::readCarCapacityFile(std::string filename) {
 	std::ifstream infile(filename);
 
@@ -50,7 +59,7 @@ void Controller::readProductsFile(std::string filename) {
 
 	std::ifstream infile(filename);
 
-	Product product = EMPTY_PRODUCT;
+	auto product = EMPTY_PRODUCT;
 	while (infile >> product.name >> product.count >> product.loading_time >> product.unloading_time) {
 		products.push_back(product);
 		++product.id;
@@ -74,7 +83,7 @@ void Controller::printBrief(std::ostream& output_stream, const std::vector<std::
 }
 
 void Controller::printFull(std::ostream& output_stream, const std::vector<std::int16_t>& car_list, std::uint64_t time) const {
-	std::vector<Product> car_products(products);
+	auto car_products(products);
 	
 	output_stream << "      | ";
 	for (std::vector<Product>::size_type i = 0; i != products.size(); ++i)
@@ -85,59 +94,49 @@ void Controller::printFull(std::ostream& output_stream, const std::vector<std::i
 	std::vector<Product>::size_type col_len = 8;
 	for (std::vector<Product>::size_type i = 0; i != products.size(); ++i) {
 		col_len = products[i].name.length() + std::to_string(car_products[i].count).length() + 2;
+
 		output_stream << std::string(col_len, '-') << "|";
 	}
 	output_stream << std::endl;
 
-	for (std::vector<Product>::size_type i = 0; i != car_products.size(); ++i)
-		car_products[i].count = 0;
+	for (std::vector<std::int16_t>::size_type i = 0; i != cars_count; ++i) {
+		for (std::vector<Product>::size_type i = 0; i != car_products.size(); ++i)
+			car_products[i].count = 0;
 
-	for (std::vector<std::int16_t>::size_type i = 0; i != car_list.size(); ++i) {
-		if ((i + 1) % car_capacity == 0) {
-			output_stream << "Car " << i / car_capacity << " | ";
+		auto car = getCar(car_list, i);
+		for (std::vector<std::int16_t>::size_type i = 0; i != car.size(); ++i)
+			if (car[i] != EMPTY_PLACE)
+				++car_products[car[i]].count;
 
-			for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
-				output_stream << std::string(car_products[j].name.length(), ' ') << car_products[j].count << " | ";
+		output_stream << "Car " << i << " | ";
+		for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
+			output_stream << std::string(car_products[j].name.length(), ' ') << car_products[j].count << " | ";
 
-			for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
-				car_products[j].count = 0;
-
-			output_stream << std::endl;
-		}
-		else
-			if (car_list[i] != EMPTY_PLACE)
-				++car_products[car_list[i]].count;
+		output_stream << std::endl;
 	}
 
-	output_stream << "\nDelivery time = " << getStrMinutes(time) << " min" << std::endl << std::endl;
+	output_stream << "Delivery time = " << getStrMinutes(time) << " min" << std::endl << std::endl;
 }
 
-Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form, std::string delivery_filename) {
-	Delivery delivery;
+Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form, const std::vector<std::vector<std::int16_t>>& delivery_table) {
+	auto delivery = EMPTY_DELIVERY;
 
-	if (delivery_filename != NO_FILE)
-		readDeliveryCarList(delivery_filename);
-	else
-		clearDeliveryCarList();
+	if (1 < products.size()) {
+		convertDeliveryTableToList(delivery_table);
 
-	if (!products.empty()) {
-		makeCarList();
+		delivery = findOptimalOrder(output_stream, output_form);
+	}
 
-		func_ptr print_func = nullptr;
-		switch (output_form) {
-			case OutputForm::NONE:  print_func = &Controller::printNone;  break;
-			case OutputForm::BRIEF: print_func = &Controller::printBrief; break;
-			case OutputForm::FULL:  print_func = &Controller::printFull;  break;
-		}
+	return delivery;
+}
 
-		auto begin = std::chrono::steady_clock::now();
+Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form, std::string delivery_table_filename) {
+	auto delivery = EMPTY_DELIVERY;
 
-		delivery = bruteForceCarList(output_stream, print_func);
+	if (1 < products.size()) {
+		readDeliveryCarList(delivery_table_filename);
 
-		auto end = std::chrono::steady_clock::now();
-		auto sec = std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
-
-		output_stream << "\nElapsed time = " << getStrMinutes(sec) << " min" << std::endl;
+		delivery = findOptimalOrder(output_stream, output_form);
 	}
 
 	return delivery;
@@ -161,6 +160,24 @@ void Controller::clearDeliveryCarList() {
 	std::vector<std::int16_t>().swap(delivery_car_list);
 }
 
+void Controller::convertDeliveryTableToList(const std::vector<std::vector<std::int16_t>>& delivery_table) {
+	clearDeliveryCarList();
+
+	for (std::vector<std::int16_t>::size_type i = 0; i != delivery_table.size(); ++i) {
+		auto free_places = car_capacity;
+
+		for (std::int16_t j = 0; j != delivery_table[i].size(); ++j) {
+			for (std::int16_t k = 0; k != delivery_table[i][j]; ++k)
+				delivery_car_list.push_back(j);
+
+			free_places -= delivery_table[i][j];
+		}
+
+		for (std::vector<std::int16_t>::size_type j = 0; j != free_places; ++j)
+			delivery_car_list.push_back(EMPTY_PLACE);
+	}
+}
+
 void Controller::readDeliveryCarList(std::string filename) {
 	clearDeliveryCarList();
 
@@ -172,7 +189,7 @@ void Controller::readDeliveryCarList(std::string filename) {
 
 		std::int16_t product_count = 0;
 		std::int16_t product_id = 0;
-		std::vector<std::int16_t>::size_type free_places = car_capacity;
+		auto free_places = car_capacity;
 		while (sstream >> product_count) {
 			for (std::int16_t i = 0; i != product_count; ++i)
 				delivery_car_list.push_back(product_id);
@@ -188,12 +205,22 @@ void Controller::readDeliveryCarList(std::string filename) {
 	infile.close();
 }
 
+std::vector<std::int16_t> Controller::getCar(const std::vector<std::int16_t>& car_list, std::vector<std::int16_t>::size_type car_id) const {
+	auto begin = car_list.begin() + car_id * car_capacity;
+	auto end = car_list.begin() + (car_id + 1) * car_capacity;
+
+	return std::vector<std::int16_t>(begin, end);
+}
+
 std::uint64_t Controller::carService(const std::vector<std::int16_t>& car_list, const std::vector<std::int16_t>& new_car_list) const {
 	std::uint64_t time = 0;
-
+	
 	for (std::vector<std::int16_t>::size_type i = 0; i != car_list.size(); ++i)
-		if (car_list[i] != new_car_list[i] && new_car_list[i] != EMPTY_PLACE)
-			time += products[new_car_list[i]].unloading_time + products[new_car_list[i]].loading_time;
+		if (car_list[i] != new_car_list[i] && car_list[i] != EMPTY_PLACE)
+			if (car_list[i] != EMPTY_PLACE && new_car_list[i] != EMPTY_PLACE) {
+				time += products[car_list[i]].unloading_time;
+				time += products[new_car_list[i]].loading_time;
+			}
 
 	return time;
 }
@@ -202,8 +229,8 @@ void Controller::makeCarList() {
 	clearCarList();
 
 	for (auto const& product : products) {
-		std::vector<std::int16_t>::size_type free_places = car_capacity - (car_capacity < product.count ?
-														   product.count % car_capacity : product.count);
+		auto free_places = car_capacity - (car_capacity < product.count ?
+						   product.count % car_capacity : product.count);
 
 		for (std::vector<std::int16_t>::size_type i = 0; i != product.count; ++i)
 			car_list.push_back(product.id);
@@ -211,22 +238,59 @@ void Controller::makeCarList() {
 		for (std::vector<std::int16_t>::size_type i = 0; i != free_places; ++i)
 			car_list.push_back(EMPTY_PLACE);
 	}
+
+	cars_count = car_list.size() / car_capacity;
 }
 
-Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr print_func) {
-	Delivery delivery = EMPTY_DELIVERY;
+Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr print_func) const {
+	auto delivery = INIT_DELIVERY;
 
-	std::uint64_t delivery_time = 0;
-	std::vector<std::int16_t> new_car_list(car_list);
+	auto new_car_list(car_list);
+	std::vector<std::vector<std::int16_t>> delivery_cars;
+
+	for (std::vector<std::int16_t>::size_type i = 0; i != cars_count; ++i)
+		delivery_cars.push_back(getCar(delivery_car_list, i));
 
 	do {
-		delivery_time = carService(car_list, new_car_list);
+		std::uint64_t cur_delivery_time = carService(car_list, new_car_list);
 
-		if (new_car_list == delivery_car_list)
-			delivery = {new_car_list, delivery_time};
+		bool equal = true;
+		for (std::vector<std::int16_t>::size_type i = 0; i != delivery_cars.size() && equal; ++i) {
+			auto unloading_car = getCar(new_car_list, i);
 
-		(this->*print_func)(output_stream, new_car_list, delivery_time);
+			equal = false;
+			for (std::vector<std::int16_t>::size_type j = 0; j != delivery_cars.size() && !equal; ++j)
+				if (std::is_permutation(unloading_car.begin(), unloading_car.end(), delivery_cars[j].begin()))
+					equal = true;
+		}
+		
+		if (equal && cur_delivery_time < delivery.time)
+			delivery = {new_car_list, cur_delivery_time};
+
+		(this->*print_func)(output_stream, new_car_list, cur_delivery_time);
 	} while (std::next_permutation(new_car_list.begin(), new_car_list.end()));
+
+	return delivery;
+}
+
+Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form) {
+	makeCarList();
+
+	func_ptr print_func = nullptr;
+	switch (output_form) {
+		case OutputForm::NONE:  print_func = &Controller::printNone;  break;
+		case OutputForm::BRIEF: print_func = &Controller::printBrief; break;
+		case OutputForm::FULL:  print_func = &Controller::printFull;  break;
+	}
+
+	auto begin = std::chrono::steady_clock::now();
+
+	auto delivery = bruteForceCarList(output_stream, print_func);
+
+	auto end = std::chrono::steady_clock::now();
+	auto sec = std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
+
+	output_stream << "Elapsed time = " << getStrMinutes(sec) << " min" << std::endl;
 
 	return delivery;
 }
