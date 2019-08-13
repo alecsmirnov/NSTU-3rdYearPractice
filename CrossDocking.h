@@ -77,8 +77,6 @@ private:
 	std::vector<std::int16_t> getCar(const std::vector<std::int16_t>& car_list, std::vector<std::int16_t>::size_type car_id) const;
 	std::uint64_t carService(const std::vector<std::int16_t>& car_list, const std::vector<std::int16_t>& new_car_list) const;
 
-	bool isEqualCars(const std::vector<std::int16_t>& a, const std::vector<std::int16_t>& b);
-
 	void makeCarList();
 	Delivery bruteForceCarList(std::ostream& output_stream, func_ptr print_func) const;
 
