@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
 
 	CrossDocking::Controller controller(car_capacity_filename, products_filename);
 
-	auto delivery = controller.findOptimalOrder(std::cout, CrossDocking::OutputForm::BRIEF, delivery_filename);
+	auto delivery = controller.findOptimalOrder(std::cout, CrossDocking::OutputForm::NONE, delivery_filename);
 
 	//const std::vector<std::vector<std::int16_t>>& delivery_table {{1, 1, 0}, 
 	//															  {0, 0, 2}, 

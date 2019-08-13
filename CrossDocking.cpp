@@ -1,6 +1,5 @@
 ﻿#include "CrossDocking.h"
 
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -9,8 +8,7 @@
 namespace CrossDocking {
 
 static const Product  EMPTY_PRODUCT  = {0, "", 0, 0, 0};
-static const Delivery EMPTY_DELIVERY = {{}, 0};
-static const Delivery INIT_DELIVERY  = {{}, std::numeric_limits<std::uint64_t>::max()};
+static const Delivery EMPTY_DELIVERY = {{}, std::numeric_limits<std::uint64_t>::max()};
 
 Controller::Controller(std::vector<std::int16_t>::size_type car_capacity, const std::vector<Product>& products) {
 	this->car_capacity = car_capacity;
@@ -100,13 +98,13 @@ void Controller::printFull(std::ostream& output_stream, const std::vector<std::i
 	output_stream << std::endl;
 
 	for (std::vector<std::int16_t>::size_type i = 0; i != cars_count; ++i) {
-		for (std::vector<Product>::size_type i = 0; i != car_products.size(); ++i)
-			car_products[i].count = 0;
+		for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
+			car_products[j].count = 0;
 
 		auto car = getCar(car_list, i);
-		for (std::vector<std::int16_t>::size_type i = 0; i != car.size(); ++i)
-			if (car[i] != EMPTY_PLACE)
-				++car_products[car[i]].count;
+		for (std::vector<std::int16_t>::size_type j = 0; j != car.size(); ++j)
+			if (car[j] != EMPTY_PLACE)
+				++car_products[car[j]].count;
 
 		output_stream << "Car " << i << " | ";
 		for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
@@ -119,7 +117,7 @@ void Controller::printFull(std::ostream& output_stream, const std::vector<std::i
 }
 
 Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form, const std::vector<std::vector<std::int16_t>>& delivery_table) {
-	auto delivery = EMPTY_DELIVERY;
+	Delivery delivery = {car_list, 0};
 
 	if (1 < products.size()) {
 		convertDeliveryTableToList(delivery_table);
@@ -131,7 +129,7 @@ Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm ou
 }
 
 Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form, std::string delivery_table_filename) {
-	auto delivery = EMPTY_DELIVERY;
+	Delivery delivery = {car_list, 0};
 
 	if (1 < products.size()) {
 		readDeliveryCarList(delivery_table_filename);
@@ -243,7 +241,7 @@ void Controller::makeCarList() {
 }
 
 Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr print_func) const {
-	auto delivery = INIT_DELIVERY;
+	auto delivery = EMPTY_DELIVERY;
 
 	auto new_car_list(car_list);
 	std::vector<std::vector<std::int16_t>> delivery_cars;
@@ -252,7 +250,7 @@ Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr pri
 		delivery_cars.push_back(getCar(delivery_car_list, i));
 
 	do {
-		std::uint64_t cur_delivery_time = carService(car_list, new_car_list);
+		auto cur_delivery_time = carService(car_list, new_car_list);
 
 		bool equal = true;
 		for (std::vector<std::int16_t>::size_type i = 0; i != delivery_cars.size() && equal; ++i) {
