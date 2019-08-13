@@ -3,13 +3,13 @@
 #include "CrossDocking.h"
 
 int main(int argc, char* argv[]) {	
-	std::string car_capacity_filename = "input/car_capacity.txt";
-	std::string products_filename	  = "input/products.txt";
-	std::string delivery_filename	  = "input/delivery.txt";
+	std::string car_capacity_filename   = "input/car_capacity.txt";
+	std::string products_filename	    = "input/products.txt";
+	std::string delivery_table_filename	= "input/delivery_table.txt";
 
 	CrossDocking::Controller controller(car_capacity_filename, products_filename);
 
-	auto delivery = controller.findOptimalOrder(std::cout, CrossDocking::OutputForm::NONE, delivery_filename);
+	auto delivery = controller.findOptimalOrder(std::cout, CrossDocking::OutputForm::NONE, delivery_table_filename);
 
 	//const std::vector<std::vector<std::int16_t>>& delivery_table {{1, 1, 0}, 
 	//															  {0, 0, 2}, 
