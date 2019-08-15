@@ -267,8 +267,6 @@ Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr pri
 		delivery_cars.push_back(getCar(delivery_car_list, i));
 
 	do {
-		auto cur_delivery_time = carService(car_list, new_car_list);
-
 		bool equal = true;
 		for (std::vector<std::int16_t>::size_type i = 0; i != delivery_cars.size() && equal; ++i) {
 			auto unloading_car = getCar(new_car_list, i);
@@ -279,8 +277,11 @@ Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr pri
 					equal = true;
 		}
 		
-		if (equal && cur_delivery_time < delivery.time) {
-			delivery = {new_car_list, cur_delivery_time};
+		if (equal) {
+			auto cur_delivery_time = carService(car_list, new_car_list);
+
+			if (cur_delivery_time < delivery.time)
+				delivery = {new_car_list, cur_delivery_time};
 
 			(this->*print_func)(output_stream, new_car_list, cur_delivery_time);
 		}
