@@ -55,6 +55,11 @@ public:
 
 	std::vector<std::int16_t>::size_type getCarCapacity() const;
 	std::vector<std::int16_t>::size_type getCarsCount() const;
+
+	std::vector<Product> getProducts() const;
+	std::vector<std::int16_t> getCarList() const;
+	std::vector<std::int16_t> deliveryCarList() const;
+
 	std::string getStrMinutes(std::uint64_t time) const;
 
 	void printNone(std::ostream&, const std::vector<std::int16_t>&, std::uint64_t) const {}

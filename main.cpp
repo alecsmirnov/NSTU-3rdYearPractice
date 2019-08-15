@@ -9,16 +9,24 @@ int main(int argc, char* argv[]) {
 
 	CrossDocking::Controller controller(car_capacity_filename, products_filename);
 
-	auto delivery = controller.findOptimalOrder(std::cout, CrossDocking::OutputForm::NONE, delivery_table_filename);
+	auto delivery = controller.findOptimalOrder(std::cout, CrossDocking::OutputForm::FULL, delivery_table_filename);
 
-	//const std::vector<std::vector<std::int16_t>>& delivery_table {{1, 1, 0}, 
-	//															  {0, 0, 2}, 
-	//															  {1, 2, 0}};
+	if (!controller.getCarList().empty()) {
+		std::cout << std::endl << "Initial order:" << std::endl;
 
-	//auto delivery = controller.findOptimalOrder(std::cout, CrossDocking::OutputForm::NONE, delivery_table);
+		controller.printFull(std::cout, controller.getCarList(), 0);
+	}
 
-	std::cout << std::endl;
-	controller.printFull(std::cout, delivery.car_list, delivery.time);
+	if (controller.getProducts().size() <= 1)
+		std::cout << "No products to re-sort!" << std::endl;
+	else 
+		if (!delivery.car_list.empty()) {
+			std::cout << "Optimal order:" << std::endl;
+
+			controller.printFull(std::cout, delivery.car_list, delivery.time);
+		}
+		else
+			std::cout << "Optimal order not found!" << std::endl;
 
 	return 0;
 }

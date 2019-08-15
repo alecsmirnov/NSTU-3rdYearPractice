@@ -8,7 +8,8 @@
 namespace CrossDocking {
 
 static const Product  EMPTY_PRODUCT  = {0, "", 0, 0, 0};
-static const Delivery EMPTY_DELIVERY = {{}, std::numeric_limits<std::uint64_t>::max()};
+static const Delivery INIT_DELIVERY  = {{}, std::numeric_limits<std::uint64_t>::max()};
+static const Delivery EMPTY_DELIVERY = {{}, 0};
 
 Controller::Controller(std::vector<std::int16_t>::size_type car_capacity, const std::vector<Product>& products) {
 	this->car_capacity = car_capacity;
@@ -40,6 +41,18 @@ std::vector<std::int16_t>::size_type Controller::getCarCapacity() const {
 
 std::vector<std::int16_t>::size_type Controller::getCarsCount() const {
 	return cars_count;
+}
+
+std::vector<Product> Controller::getProducts() const {
+	return products;
+}
+
+std::vector<std::int16_t> Controller::getCarList() const {
+	return car_list;
+}
+
+std::vector<std::int16_t> Controller::deliveryCarList() const {
+	return delivery_car_list;
 }
 
 void Controller::readCarCapacityFile(std::string filename) {
@@ -81,43 +94,45 @@ void Controller::printBrief(std::ostream& output_stream, const std::vector<std::
 }
 
 void Controller::printFull(std::ostream& output_stream, const std::vector<std::int16_t>& car_list, std::uint64_t time) const {
-	auto car_products(products);
+	if (!products.empty()) {
+		auto car_products(products);
 	
-	output_stream << "      | ";
-	for (std::vector<Product>::size_type i = 0; i != products.size(); ++i)
-		output_stream << products[i].name << std::string(std::to_string(car_products[i].count).length(), ' ') << " | ";
-	output_stream << std::endl;
-
-	output_stream << "------|";
-	std::vector<Product>::size_type col_len = 8;
-	for (std::vector<Product>::size_type i = 0; i != products.size(); ++i) {
-		col_len = products[i].name.length() + std::to_string(car_products[i].count).length() + 2;
-
-		output_stream << std::string(col_len, '-') << "|";
-	}
-	output_stream << std::endl;
-
-	for (std::vector<std::int16_t>::size_type i = 0; i != cars_count; ++i) {
-		for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
-			car_products[j].count = 0;
-
-		auto car = getCar(car_list, i);
-		for (std::vector<std::int16_t>::size_type j = 0; j != car.size(); ++j)
-			if (car[j] != EMPTY_PLACE)
-				++car_products[car[j]].count;
-
-		output_stream << "Car " << i << " | ";
-		for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
-			output_stream << std::string(car_products[j].name.length(), ' ') << car_products[j].count << " | ";
-
+		output_stream << "      | ";
+		for (std::vector<Product>::size_type i = 0; i != products.size(); ++i)
+			output_stream << products[i].name << std::string(std::to_string(car_products[i].count).length(), ' ') << " | ";
 		output_stream << std::endl;
-	}
 
-	output_stream << "Delivery time = " << getStrMinutes(time) << " min" << std::endl << std::endl;
+		output_stream << "------|";
+		std::vector<Product>::size_type col_len = 8;
+		for (std::vector<Product>::size_type i = 0; i != products.size(); ++i) {
+			col_len = products[i].name.length() + std::to_string(car_products[i].count).length() + 2;
+
+			output_stream << std::string(col_len, '-') << "|";
+		}
+		output_stream << std::endl;
+
+		for (std::vector<std::int16_t>::size_type i = 0; i != cars_count; ++i) {
+			for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
+				car_products[j].count = 0;
+
+			auto car = getCar(car_list, i);
+			for (std::vector<std::int16_t>::size_type j = 0; j != car.size(); ++j)
+				if (car[j] != EMPTY_PLACE)
+					++car_products[car[j]].count;
+
+			output_stream << "Car " << i << " | ";
+			for (std::vector<Product>::size_type j = 0; j != car_products.size(); ++j)
+				output_stream << std::string(car_products[j].name.length(), ' ') << car_products[j].count << " | ";
+
+			output_stream << std::endl;
+		}
+
+		output_stream << "Delivery time = " << getStrMinutes(time) << " min" << std::endl << std::endl;
+	}
 }
 
 Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form, const std::vector<std::vector<std::int16_t>>& delivery_table) {
-	Delivery delivery = {car_list, 0};
+	Delivery delivery = EMPTY_DELIVERY;
 
 	if (1 < products.size()) {
 		convertDeliveryTableToList(delivery_table);
@@ -129,7 +144,7 @@ Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm ou
 }
 
 Delivery Controller::findOptimalOrder(std::ostream& output_stream, OutputForm output_form, std::string delivery_table_filename) {
-	Delivery delivery = {car_list, 0};
+	Delivery delivery = EMPTY_DELIVERY;
 
 	if (1 < products.size()) {
 		readDeliveryCarList(delivery_table_filename);
@@ -243,7 +258,7 @@ void Controller::makeCarList() {
 }
 
 Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr print_func) const {
-	auto delivery = EMPTY_DELIVERY;
+	auto delivery = INIT_DELIVERY;
 
 	auto new_car_list(car_list);
 
@@ -264,10 +279,11 @@ Delivery Controller::bruteForceCarList(std::ostream& output_stream, func_ptr pri
 					equal = true;
 		}
 		
-		if (equal && cur_delivery_time < delivery.time)
+		if (equal && cur_delivery_time < delivery.time) {
 			delivery = {new_car_list, cur_delivery_time};
 
-		(this->*print_func)(output_stream, new_car_list, cur_delivery_time);
+			(this->*print_func)(output_stream, new_car_list, cur_delivery_time);
+		}
 	} while (std::next_permutation(new_car_list.begin(), new_car_list.end()));
 
 	return delivery;
